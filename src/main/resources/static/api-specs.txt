@@ -1,0 +1,153 @@
+======================================================================
+           API SPECIFICATION FOR LOGGING DEMO APPLICATION
+======================================================================
+Version: 1.0
+Date: 2025-08-22
+
+This document provides the API specifications for the two applications
+in the logging demo: the Main Application and the External Service.
+
+----------------------------------------------------------------------
+I. OVERVIEW
+----------------------------------------------------------------------
+
+1.  **Main Application**
+    -   **Port**: 8080
+    -   **Description**: The primary application that receives user requests and orchestrates calls to external services. It contains the advanced AOP logging framework.
+
+2.  **External Service**
+    -   **Port**: 8082
+    -   **Description**: A mock external service that provides dependent APIs for the Main Application to call.
+
+----------------------------------------------------------------------
+II. COMMON HEADERS
+----------------------------------------------------------------------
+
+All requests to the Main Application (8080) can optionally include the following header for end-to-end distributed tracing.
+
+-   **Header**: `X-Correlation-ID`
+-   **Type**: String (UUID recommended)
+-   **Description**: A unique identifier for a request flow. If not provided, the Main Application will generate one. This ID is propagated to all downstream external calls and appears in all log messages.
+-   **Example**: `X-Correlation-ID: a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d`
+
+----------------------------------------------------------------------
+III. MAIN APPLICATION (PORT: 8080) ENDPOINTS
+----------------------------------------------------------------------
+
+### 1. Welcome Flow
+
+-   **Endpoint**: `POST /welcome`
+-   **Description**: Triggers a call to the external WELCOME service to process a user message.
+-   **Request Body**:
+    ```json
+    {
+      "userName": "string",
+      "message": "string"
+    }
+    ```
+-   **Example Request**:
+    ```json
+    {
+      "userName": "Gemini",
+      "message": "Testing DTOs"
+    }
+    ```
+-   **Success Response (200 OK)**:
+    ```json
+    {
+      "confirmationId": "string (UUID)",
+      "processedMessage": "string"
+    }
+    ```
+
+### 2. Delegate Creation Flow
+
+-   **Endpoint**: `POST /createDelegate`
+-   **Description**: Checks if a card is entitled by calling the external UCE service and creates a delegate sharing ID if successful.
+-   **Request Body**:
+    ```json
+    {
+      "cardId": "string"
+    }
+    ```
+-   **Example Request**:
+    ```json
+    {
+      "cardId": "C-12345"
+    }
+    ```
+-   **Success Response (200 OK) - Card is Entitled**:
+    ```json
+    {
+      "status": "SUCCESS",
+      "sharingId": "string (UUID)",
+      "message": "Delegate card has been created."
+    }
+    ```
+-   **Success Response (200 OK) - Card is Not Entitled**:
+    ```json
+    {
+      "status": "FAILED",
+      "sharingId": null,
+      "message": "Card is not entitled for delegation."
+    }
+    ```
+
+----------------------------------------------------------------------
+IV. EXTERNAL SERVICE (PORT: 8082) ENDPOINTS
+----------------------------------------------------------------------
+
+### 1. WELCOME Service
+
+-   **Endpoint**: `POST /api/external/welcome`
+-   **Description**: Mock service to process a welcome message.
+-   **Request Body**: `WelcomeRequest` DTO
+    ```json
+    {
+      "userName": "string",
+      "message": "string"
+    }
+    ```
+-   **Success Response (200 OK)**: `WelcomeResponse` DTO
+    ```json
+    {
+      "confirmationId": "string (UUID)",
+      "processedMessage": "string"
+    }
+    ```
+
+### 2. UCE (User Card Entitlement) Service
+
+-   **Endpoint**: `POST /api/external/entitlementCheck`
+-   **Description**: Mock service to check if a card ID is on a static entitlement list.
+-   **Request Body**: `UceRequest` DTO
+    ```json
+    {
+      "cardId": "string"
+    }
+    ```
+-   **Success Response (200 OK)**: `UceResponse` DTO
+    ```json
+    {
+      "isEntitled": "boolean",
+      "message": "string"
+    }
+    ```
+-   **Example Response (Entitled)**:
+    ```json
+    {
+      "isEntitled": true,
+      "message": "Card ID C-12345 is entitled."
+    }
+    ```
+-   **Example Response (Not Entitled)**:
+    ```json
+    {
+      "isEntitled": false,
+      "message": "Card ID C-99999 is not entitled."
+    }
+    ```
+
+======================================================================
+                       END OF SPECIFICATION
+======================================================================
